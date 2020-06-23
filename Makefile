@@ -2,6 +2,7 @@
 # https://stackoverflow.com/questions/2481269/how-to-make-a-simple-c-makefile
 # https://www.cs.colby.edu/maxwell/courses/tutorials/maketutor/
 # Need to decide how "clever" I want to be...
+
 CXX = c++
 CXXFLAGS = -I.
 RM=rm -f
