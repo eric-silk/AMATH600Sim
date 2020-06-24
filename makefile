@@ -31,6 +31,8 @@ LDFLAGS += $(patsubst -L%, $(shell pkg-config --variable=ldflag_rpath $(PACKAGES
 LDLIBS := $(shell pkg-config --libs-only-l $(PACKAGES)) -lm
 LDLIBS += -lstdc++
 
+RM=rm -f
+
 # Many suffixes are covered by implicit rules, but you may need to write custom rules
 # such as these if you use suffixes that do not have implicit rules.
 # https://www.gnu.org/software/make/manual/html_node/Catalogue-of-Rules.html#Catalogue-of-Rules
@@ -50,11 +52,19 @@ LDLIBS += -lstdc++
 # For a multi-file case, suppose you have the source files a.F90, b.c, and c.cxx
 # (with a program statement appearing in a.F90 or main() appearing in the C or
 # C++ source).  This can be built by uncommenting the following two lines.
-#
+
+SRC := power_example.cpp
+SRC += 
+
+OBJ=$(subst .cpp,.o,$(SRC))
+
 all : power_example
 
-power_example : power_example.cpp
+power_example : $(OBJ)
 	$(LINK.cc) -o $@ $^ $(LDLIBS)
+
+clean :
+	$(RM) $(OBJ) power_example
 
 print_vars:
 	@echo CC=$(CC)
