@@ -68,8 +68,3 @@ all : power_example
 power_example : power_example.cpp
 	$(CXX) $(LINK.F) -o $@ $^ $(LDLIBS)
 
-# If the file c.cxx needs to link with a C++ standard library -lstdc++ , then
-# you'll need to add it explicitly.  It can go in the rule above or be added to
-# a target-specific variable by uncommenting the line below.
-#
-# app : LDLIBS += -lstdc++
