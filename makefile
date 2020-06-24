@@ -31,18 +31,6 @@ LDFLAGS += $(patsubst -L%, $(shell pkg-config --variable=ldflag_rpath $(PACKAGES
 LDLIBS := $(shell pkg-config --libs-only-l $(PACKAGES)) -lm
 LDLIBS += -lstdc++
 
-print:
-	@echo CC=$(CC)
-	@echo CXX=$(CXX)
-	@echo FC=$(FC)
-	@echo CFLAGS=$(CFLAGS)
-	@echo CXXFLAGS=$(CXXFLAGS)
-	@echo FFLAGS=$(FFLAGS)
-	@echo CPPFLAGS=$(CPPFLAGS)
-	@echo LDFLAGS=$(LDFLAGS)
-	@echo LDLIBS=$(LDLIBS)
-	@echo LINK.F=$(LINK.F)
-
 # Many suffixes are covered by implicit rules, but you may need to write custom rules
 # such as these if you use suffixes that do not have implicit rules.
 # https://www.gnu.org/software/make/manual/html_node/Catalogue-of-Rules.html#Catalogue-of-Rules
@@ -66,5 +54,19 @@ print:
 all : power_example
 
 power_example : power_example.cpp
-	$(CXX) $(LINK.F) -o $@ $^ $(LDLIBS)
+	$(LINK.cc) -o $@ $^ $(LDLIBS)
+
+print_vars:
+	@echo CC=$(CC)
+	@echo CXX=$(CXX)
+	@echo FC=$(FC)
+	@echo CFLAGS=$(CFLAGS)
+	@echo CXXFLAGS=$(CXXFLAGS)
+	@echo FFLAGS=$(FFLAGS)
+	@echo CPPFLAGS=$(CPPFLAGS)
+	@echo LDFLAGS=$(LDFLAGS)
+	@echo LDLIBS=$(LDLIBS)
+	@echo LINK.F=$(LINK.F)
+	@echo 
+	@echo LINK.cc=$(LINK.cc)
 

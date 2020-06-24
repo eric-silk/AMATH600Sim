@@ -34,12 +34,12 @@ struct VertexPower
   PetscInt zone; // zone number
   PetscScalar vm; // bus voltage mag in PU
   PetscScalar va; // v phase angle
-  PetsInt owner;
-  PetsInt internal_i;
-  PetsInt ngen;
-  PetsInt gidx[NGEN_AT_BUS_MAX];
-  PetsInt nload;
-  PetsInt lidx[NLOAD_AT_BUS_MAX];
+  PetscInt owner;
+  PetscInt internal_i;
+  PetscInt ngen;
+  PetscInt gidx[NGEN_AT_BUS_MAX];
+  PetscInt nload;
+  PetscInt lidx[NLOAD_AT_BUS_MAX];
 } PETSC_ATTRIBUTEALIGNED(sizeof(PetscScalar));
 
 
