@@ -56,15 +56,25 @@ RM=rm -f
 SRC := power_example.cpp
 SRC += 
 
-OBJ=$(subst .cpp,.o,$(SRC))
+OBJ := $(subst .cpp,.o,$(SRC))
+
+PETSC_EXAMPLE_SRC := power.c
+PETSC_EXAMPLE_SRC += pffunctions.c
+PETSC_EXAMPLE_SRC += PFReadData.c
+
+PETSC_EXAMPLE_OBJ := $(subst .c,.o,$(PETSC_EXAMPLE_SRC))
 
 all : power_example
 
 power_example : $(OBJ)
 	$(LINK.cc) -o $@ $^ $(LDLIBS)
 
+power : $(PETSC_EXAMPLE_OBJ)
+	$(LINK.cc) -o $@ $^ $(LDLIBS)
+
+.PHONY: clean
 clean :
-	$(RM) $(OBJ) power_example
+	$(RM) $(OBJ) $(PETSC_EXAMPLE_OBJ) power_example power
 
 print_vars:
 	@echo CC=$(CC)
