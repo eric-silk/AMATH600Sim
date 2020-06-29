@@ -1,4 +1,6 @@
 #include <iostream>
+#include <petscdmnetwork.h>
+
 #include "power_example.h"
 
 int main(void)
