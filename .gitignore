@@ -1,4 +1,5 @@
 # Ignore extensionless files
+# For build products and ctags
 *
 !/**/
 !*.*
