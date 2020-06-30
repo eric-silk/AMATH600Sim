@@ -26,6 +26,76 @@ int main(int argc, char **argv)
   // Stages in the sense "we're in phase 1" not like a "stage" for a play
   // Why multiple stages though? why not just a single logger?
   PetscLogStage stage1, stage2;
+  PetscMPIInt rank;
+  PetscInt eStart, eEnd, vStart, vEnd, j;
+  PetscInt genj, loadj;
+  Vec X, F;
+  Mat J;
+  SNES snes;
+
+  // Pretty much required at the beginning. inits everything, including MPI
+  // the database file, "poweroptions" here, seems to contain command line arguments commonly used
+  // More investigation needed for specifics
+  ierr = PetscInitialize(&argc, &argv, "poweroptions", help); if (ierr) return ierr;
+  // Get the rank. Looks like there's a specific comm world for Petsc
+  // Can multiple petsc apps run simultaneously on a cluster automagically? (probably not)
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank); CHKERRQ(ierr);
+  {
+    // scope this section for...reasons? The comments mention something about the clang static analyzer. Dunno.
+    const PetscMPIInt crank = rank; //that's c(onst) rank, not crank. I think.
+    // Set up the Network object. This grid is going to be our...admittance matrix, I believe.
+    ierr = DMNetworkCreate(PETSC_COMM_WORLD, &networkdm); CHKERRQ(ierr);
+    // Register components. This is where we define what types can be represented (as well as what their
+    // representations are) in the network. Here, its the various electrical components -- branches,
+    // busses, generators, and loads. In general, though, this could be things like, idk, pipes and turbines
+    // and filters in a water pipe system. Or blood vessels. (Finite elements in a heat flow problem, maybe?)
+    // The output (last arg) is a (unique? universally unique?) ID to indicate the types.
+    ierr = DMNetworkRegisterComponent(networkdm,
+                                      "branchstruct",
+                                      sizeof(struct _p_EDGE_Power),
+                                      &User.compkey_branch); CHKERRQ(ierr);
+    // I always thought of busses as vertexes...but, I guess (given PQ, PV, busses) that's not correct
+    // They have unique behaviors rather than being a pure connection
+    ierr = DMNetworkRegisterComponent(networkdm,
+                                      "busstruct",
+                                      sizeof(struct _p_VERTEX_POWER),
+                                      &User.compkey_branch); CHKERRQ(ierr);
+    // Why are neither of these "_p_VERTEX_*" or "_p_EDGE_*"?
+    // Probably detailed in the header.
+    ierr = DMNetworkRegisterComponent(networkdm,
+                                      "genstruct",
+                                      sizeof(struct _p_GEN),
+                                      &User.compkey_branch); CHKERRQ(ierr);
+    ierr = DMNetworkRegisterComponent(networkdm,
+                                      "loadstruct",
+                                      sizeof(struct _p_LOAD),
+                                      &User.compkey_branch); CHKERRQ(ierr);
+
+    // This is an interesting pattern. Why the stage and push? This ain't Git!
+    ierr = PetscLogStageRegister("Read Data", &stage1); CHKERRQ(ierr);
+    PetscLogStagePush(stage1);
+    if (!crank)
+    {
+      // Only the zeroeth rank readeth the data
+      // options database, NULL for default global db
+      // string to prepend to name, or NULL if none
+      // name of the option sought
+      // maximum length of that string (ah, C strings...)
+      // output, location to copy string. So...why's it NULL? Just discards it? why even have this then???
+      ierr = PetscOptionsGetString(NULL, NULL, "-pfdata", pfdata_file, sizeof(pfdata_file), NULL); CHKERRQ(ierr);
+      // petscnew is a memory aligned new. Kinda like mkl_alloc and such.
+      ierr = PetscNew(&pfdata); CHKERRQ(ierr);
+      // This is in the pffunctions I think
+      ierr = PFReadMatPowerData(pfdata, pfdata_file); CHKERRQ(ierr);
+      User.Sbase = pfdata->sbase;
+
+      numEdges = pfdata->nbranch;
+      numVertices = pfdata->nbus;
+
+      // Yep, looks like edges are stored as packed tuples (e.g. [(,),(,)...(,)]
+      ierr = PetscMalloc(2*numEdges, &edges); CHKERRQ(ierr);
+      ierr = GetListOfEdges_Power(pfdata, edges); CHKERRQ(ierr);
+    }
 }
 
 // snes is the SNES object (duh)
