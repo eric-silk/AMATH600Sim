@@ -96,6 +96,26 @@ int main(int argc, char **argv)
       ierr = PetscMalloc(2*numEdges, &edges); CHKERRQ(ierr);
       ierr = GetListOfEdges_Power(pfdata, edges); CHKERRQ(ierr);
     }
+
+    // Similar to above. options db (null for default), prepended string (NULL for none)
+    // the option name, and then the output (true or false)
+    ierr = PetscOptionsHasName(NULL, NULL, "-jac_error", &User.jac_error); CHKERRQ(ierr);
+
+    // Again, not really sure why the logging works this way, but this pops the stage off the stack
+    PetscLogStagePop();
+    // Block until all procs are synced up.
+    ierr = MPI_Barrier(PETSC_COMM_WORLD); CHKERRQ(ierr);
+    // Ah, maybe the log stages are to provide a formal method of delinieation?
+    ierr = PetscLogStageRegister("Create network", &stage2); CHKERRQ(ierr);
+    PectscLogStagePush(stage2);
+    // Set number of nodes and edges
+    // dm obj, global number of subnets, num of local verts, num of local edges, global
+    //   number of "coupling" (probably how many this attaches to?), number of local edges for each
+    //   coupling network (array? value by ref? not sure)
+    ierr = DMNetworkSetSizes(networkdm, 1, &numVertices, &numEdges, 0, NULL); CHKERRQ(ierr);
+    // Set up the connections
+    // Given a list of edges, set 'em up. The last arg is for the coupling subnets
+    ierr = DMNetworkSetEdgeList(networkdm, &edges, NULL); CHKERRQ(ierr);
 }
 
 // snes is the SNES object (duh)
