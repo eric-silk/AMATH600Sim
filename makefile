@@ -48,28 +48,23 @@ RM=rm -f
 	$(LINK.cc) -o $@ $^ $(LDLIBS)
 %.o: %.cpp
 	$(COMPILE.cc) $(OUTPUT_OPTION) $<
+% : %.c
+	$(LINK.cc) -o $@ $^ $(LDLIBS)
+%.o: %.c
+	$(COMPILE.cc) $(OUTPUT_OPTION) $<
 
 # For a multi-file case, suppose you have the source files a.F90, b.c, and c.cxx
 # (with a program statement appearing in a.F90 or main() appearing in the C or
 # C++ source).  This can be built by uncommenting the following two lines.
 
-SRC := power_example.cpp
+SRC := my_power.c
 SRC += 
 
-OBJ := $(subst .cpp,.o,$(SRC))
+OBJ := $(subst .c,.o,$(SRC))
 
-PETSC_EXAMPLE_SRC := power.c
-PETSC_EXAMPLE_SRC += pffunctions.c
-PETSC_EXAMPLE_SRC += PFReadData.c
+all : my_power
 
-PETSC_EXAMPLE_OBJ := $(subst .c,.o,$(PETSC_EXAMPLE_SRC))
-
-all : power_example
-
-power_example : $(OBJ)
-	$(LINK.cc) -o $@ $^ $(LDLIBS)
-
-power : $(PETSC_EXAMPLE_OBJ)
+my_power : $(OBJ)
 	$(LINK.cc) -o $@ $^ $(LDLIBS)
 
 .PHONY: clean

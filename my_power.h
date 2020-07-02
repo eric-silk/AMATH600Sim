@@ -31,7 +31,7 @@ struct _p_UserCtx_Power
 typedef struct _p_UserCtx_Power UserCtx_Power;
 
 // Struct representing a bus
-struct _p_Vertex_Power
+struct _p_VERTEX_Power
 {
   PetscInt bus_i; // integer bus #, used by Matpower
   char i[20]; // Bus num as a string (why a string??)
@@ -50,10 +50,12 @@ struct _p_Vertex_Power
   PetscInt gidx[NGEN_AT_BUS_MAX]; // list of the generator indices at this bus, for use with the GEN struct
   PetscInt nload;  // number of loads, duh.
   PetscInt lidx[NLOAD_AT_BUS_MAX]; // the list of load ids. Why support multiple and cap it at 1?
+} PETSC_ATTRIBUTEALIGNED(sizeof(PetscScalar)); // align for arraylike access
 
 typedef struct _p_VERTEX_Power *VERTEX_Power;
 
-struct _p_LOAD{
+struct _p_LOAD
+{
   PetscInt bus_i; // bus number
   char i[20]; // bus number "extended" name
   char id[20]; // load identifier, in case of multiple loads (set to 1 currently)

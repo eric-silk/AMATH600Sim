@@ -1,11 +1,11 @@
-static char help[] = 
-"This is a re-write of the SNES example from Petsc\n
-An attempt was made to C++-ize it, but their use of array-like access\n
-of structs is incompatible with C++.\n\n
-Instead, I'll do my best to explain each line of non-obvious code.\n
+static char help[] = \
+"This is a re-write of the SNES example from Petsc\n\
+An attempt was made to C++-ize it, but their use of array-like access\n\
+of structs is incompatible with C++.\n\n\
+Instead, I'll do my best to explain each line of non-obvious code.\n\
 See the source for deets.\n"
 
-#include "power.h"
+#include "my_power.h"
 #include <petscdmnetwork.h>
 
 // Forward declare some stuff
@@ -58,7 +58,7 @@ int main(int argc, char **argv)
     // They have unique behaviors rather than being a pure connection
     ierr = DMNetworkRegisterComponent(networkdm,
                                       "busstruct",
-                                      sizeof(struct _p_VERTEX_POWER),
+                                      sizeof(struct _p_VERTEX_Power),
                                       &User.compkey_branch); CHKERRQ(ierr);
     // Why are neither of these "_p_VERTEX_*" or "_p_EDGE_*"?
     // Probably detailed in the header.
@@ -111,7 +111,7 @@ int main(int argc, char **argv)
     //    number of local edges for each coupling subnetwork
     ierr = DMNetworkSetSizes(networkdm, 1, &numVertices, &numEdges, 0, NULL); CHKERRQ(ierr);
     // Add the edges
-    ierr = DMNetworkSetEdgeList(networkdmn, &edges, NULL); CHKERRQ(ierr);
+    ierr = DMNetworkSetEdgeList(networkdm, &edges, NULL); CHKERRQ(ierr);
     // set up the layout (actually creates the grid now?)
     ierr = DMNetworkLayoutSetUp(networkdm); CHKERRQ(ierr);
 
@@ -140,7 +140,7 @@ int main(int argc, char **argv)
       for (i = vStart; i < vEnd; ++i)
       {
         // Add each vertex
-        ierr = NetworkAddComponent(networkdm, i, User.compkey_bus, &pfdata->bus[i-vStart]); CHKERRQ(ierr);
+        ierr = DMNetworkAddComponent(networkdm, i, User.compkey_bus, &pfdata->bus[i-vStart]); CHKERRQ(ierr);
         if (pfdata->bus[i-vStart].ngen > 0)
         {
           // Add all the gen's if there are any
@@ -163,68 +163,69 @@ int main(int argc, char **argv)
         // Now add the number of variables per point
         ierr = DMNetworkAddNumVariables(networkdm, i, 2); CHKERRQ(ierr);
       }
+    }
 
-      // Not going to dig into the guts of this to grok what "setting up"
-      // actually looks like
-      ierr = DMSetUp(networkdm); CHKERRQ(ierr);
+    // Not going to dig into the guts of this to grok what "setting up"
+    // actually looks like
+    ierr = DMSetUp(networkdm); CHKERRQ(ierr);
 
-      if (!crank)
-      {
-        // Free the stuff we originally fed in
-        // There are sub-structs, so free those then the master struct
-        // Boy, destructors sure would be nice!
-        ierr = PetscFree(pfdata->bus); CHKERRQ(ierr);
-        ierr = PetscFree(pfdata->gen); CHKERRQ(ierr);
-        ierr = PetscFree(pfdata->branch); CHKERRQ(ierr);
-        ierr = PetscFree(pfdata->load); CHKERRQ(ierr);
-        ierr = PetscFree(pfdata); CHKERRQ(ierr);
-      }
+    if (!crank)
+    {
+      // Free the stuff we originally fed in
+      // There are sub-structs, so free those then the master struct
+      // Boy, destructors sure would be nice!
+      ierr = PetscFree(pfdata->bus); CHKERRQ(ierr);
+      ierr = PetscFree(pfdata->gen); CHKERRQ(ierr);
+      ierr = PetscFree(pfdata->branch); CHKERRQ(ierr);
+      ierr = PetscFree(pfdata->load); CHKERRQ(ierr);
+      ierr = PetscFree(pfdata); CHKERRQ(ierr);
+    }
 
-      // Fly, my pretties! (Distribute to processes)
-      ierr = DMNetworkDistribute(&networkdm, 0); CHKERRQ(ierr);
+    // Fly, my pretties! (Distribute to processes)
+    ierr = DMNetworkDistribute(&networkdm, 0); CHKERRQ(ierr);
 
-      // Do the loggy stuff
-      PetscLogStagePop();
+    // Do the loggy stuff
+    PetscLogStagePop();
 
-      ierr = MPI_BCAST(&User.Sbase, 1, MPIU_SCALAR, 0, PETSC_COMM_WORLD); CHKERRQ(ierr);
+    ierr = MPI_Bcast(&User.Sbase, 1, MPIU_SCALAR, 0, PETSC_COMM_WORLD); CHKERRQ(ierr);
 
-      ierr = DMCreateGlobalVector(networkdm, &X); CHKERRQ(ierr);
-      // Creates a vector of the same size, but NOT the same contents!
-      ierr = VecDuplicate(X, &F); CHKERRQ(ierr);
+    ierr = DMCreateGlobalVector(networkdm, &X); CHKERRQ(ierr);
+    // Creates a vector of the same size, but NOT the same contents!
+    ierr = VecDuplicate(X, &F); CHKERRQ(ierr);
 
-      ierr = DMCreateMatrix(networkdm, &J); CHKERRQ(ierr);
-      // Looks like this can be called for each option you want to set
-      // Here, disable the ability to insert new nonzeros to the matrix
-      // Helps with efficiency
-      ierr = MatSetOption(J, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE); CHKERRQ(ierr);
+    ierr = DMCreateMatrix(networkdm, &J); CHKERRQ(ierr);
+    // Looks like this can be called for each option you want to set
+    // Here, disable the ability to insert new nonzeros to the matrix
+    // Helps with efficiency
+    ierr = MatSetOption(J, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE); CHKERRQ(ierr);
 
-      ierr = SetInitialValues(networkdm, X, &User); CHKERRQ(ierr);
+    ierr = SetInitialValues(networkdm, X, &User); CHKERRQ(ierr);
 
-      // Creates the SNES context
-      ierr = SNESCreate(PETSC_COMM_WORLD, &snes); CHKERRQ(ierr);
-      // Associates the network with the SNES context
-      ierr = SNESSetDM(snes, networkdm); CHKERRQ(ierr);
-      // set the output location (F), the function pointer and the user context
-      ierr = SNESSetFunction(snes, F, FormFunction, &User); CHKERRQ(ierr);
-      // SNES, the approximate/numerical jacobian, any preconditioner (or the same),
-      // the routine to evaluate the jacobian, and the user context
-      ierr = SNESSetJacobian(snes, J, J, FormJacobian_Power, &User); CHKERRQ(ierr);
-      // Based on user arguments and the options file, set the respective options
-      // in the snes context. This is things like convergence terms, number of iterations, etc
-      ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
+    // Creates the SNES context
+    ierr = SNESCreate(PETSC_COMM_WORLD, &snes); CHKERRQ(ierr);
+    // Associates the network with the SNES context
+    ierr = SNESSetDM(snes, networkdm); CHKERRQ(ierr);
+    // set the output location (F), the function pointer and the user context
+    ierr = SNESSetFunction(snes, F, FormFunction, &User); CHKERRQ(ierr);
+    // SNES, the approximate/numerical jacobian, any preconditioner (or the same),
+    // the routine to evaluate the jacobian, and the user context
+    ierr = SNESSetJacobian(snes, J, J, FormJacobian_Power, &User); CHKERRQ(ierr);
+    // Based on user arguments and the options file, set the respective options
+    // in the snes context. This is things like convergence terms, number of iterations, etc
+    ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
-      // All that prep work. Now do it!
-      // the context, b (from f(x)=b, NULL for 0), and the solution vector
-      ierr = SNESSolve(snes, NULL, X); CHKERRQ(ierr);
+    // All that prep work. Now do it!
+    // the context, b (from f(x)=b, NULL for 0), and the solution vector
+    ierr = SNESSolve(snes, NULL, X); CHKERRQ(ierr);
 
-      // Clean up
-      // Again, boy dtors would be nice ;)
-      ierr = VecDestroy(&X); CHKERRQ(ierr);
-      ierr = VecDestroy(&F); CHKERRQ(ierr);
-      ierr = MatDestroy(&J); CHKERRQ(ierr);
+    // Clean up
+    // Again, boy dtors would be nice ;)
+    ierr = VecDestroy(&X); CHKERRQ(ierr);
+    ierr = VecDestroy(&F); CHKERRQ(ierr);
+    ierr = MatDestroy(&J); CHKERRQ(ierr);
 
-      ierr = SNESDestroy(&snes); CHKERRQ(ierr);
-      ierr = DMDestroy(&networkdm); CHKERRQ(ierr);
+    ierr = SNESDestroy(&snes); CHKERRQ(ierr);
+    ierr = DMDestroy(&networkdm); CHKERRQ(ierr);
     }
 
   ierr = PetscFinalize();
@@ -237,7 +238,7 @@ int main(int argc, char **argv)
 // appctx is optional "user defined function context"; likely a way to
 //   hand in arbitrary values for the evaluation. yay void ptr!
 //   short for "application context" I imagine?
-PetscErrorCode FormFunction(SNES snes, Vec X, Vec F, void *appctx);
+PetscErrorCode FormFunction(SNES snes, Vec X, Vec F, void *appctx)
 {
   // TODO
   PetscErrorCode ierr;
@@ -313,8 +314,8 @@ PetscErrorCode SetInitialValues(DM networkdm, Vec X, void *appctx)
   ierr = VecSet(X, 0.0); CHKERRQ(ierr);
   // Seems a convenience function might be helpful (or maybe bloaty) for this style of calling
   // e.g. DMGlobalToLocal(...) w/o *Begin or *End
-  ierr DMGlobalToLocalBegin(networkdm, X, INSERT_VALUES, localX); 
-  ierr DMGlobalToLocalEnd(networkdm, X, INSERT_VALUES, localX); 
+  ierr = DMGlobalToLocalBegin(networkdm, X, INSERT_VALUES, localX); 
+  ierr = DMGlobalToLocalEnd(networkdm, X, INSERT_VALUES, localX); 
 
   ierr = DMNetworkGetSubnetworkInfo(networkdm, 0, &nv, &ne, &vtx, &edges); CHKERRQ(ierr);
   // This is from the pfffunctions, will be dissected there
