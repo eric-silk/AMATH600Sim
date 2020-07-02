@@ -14,9 +14,12 @@
 
 struct _p_UserCtx_Power
 {
+  // Base power in VA (S^2 = P^2 + Q^2)
   PetscScalar Sbase;
   // Do we want to introduce error into the jacobian?
   PetscBool jac_error;
+  // These are the values used to indicate the type interally to DM
+  // assigned by the output of DMRegisterNetworkComponent
   PetscInt compkey_branch;
   PetscInt compkey_bus;
   PetscInt compkey_gen;
