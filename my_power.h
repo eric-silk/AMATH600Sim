@@ -106,4 +106,61 @@ struct _p_GEN
 
 typedef struct _p_GEN *GEN;
 
+struct _p_EDGE_Power
+{
+  PetscInt fbus; // no clue yet what this is
+  PetscInt tbus; // ""
+  // Bus numbers
+  // Requires 2 because this is an edge, not a vertex!
+  char i[20];
+  char j[20];
+  char ckt[20]; // circuit identifier
+  PetscScalar r; // branch resistance, PU
+  PetscScalar x; // branch reactance, PU
+  PetscScalar b; // branch "charging suseptance", pu
+  PetscScalar rateA; // rate a in MVA (rating?)
+  PetscScalar rateB; // rate b in MVA (rating?)
+  PetscScalar rateC; // rate c in MVA (rating?)
+  PetscScalar tapratio; // transformer info?
+  PetscScalar phaseshift; // for phase shifting transformers. What's the units, rads or degrees?
+  PetscScalar gi; // complex admittance at "i" bus, pu
+  PetscScalar bi; // ""
+  PetscScalar gj; // complex admittance at "j" bus, pu
+  PetscScalar bj; // ""
+  PetscInt status; // service status (probably what the "status" bit in each means?
+  PetscScalar length; // line length
+  PetscInt o1; // owner number
+  PetscScalar yff[2], yft[2], ytf[2], ytt[2]; // complex, of the form [G, B]
+  PetscInt internal_i; // internal "from" bus number
+  PetscInt internal_j; // internal "to" bus number
+} PETSC_ATTRIBUTEALIGNED(sizeof(PetscScalar));
+
+typedef struct _p_EDGE_Power *EDGE_Power;
+
+// "PTI" format data structure
+// Looks like PTI is a Siemens subsidiary
+// Description from UW here:
+// https://labs.ece.uw.edu/pstca/formats/pti.txt
+struct _PFDATA
+{
+  PetscScalar sbase; // Base MVA for the system
+  // These values include elements that are out of service
+  PetscInt nbus, ngen, nbranch, nload;
+
+  VERTEX_Power bus;
+  LOAD load;
+  GEN gen;
+  EDGE_Power branch;
+} PETSC_ATTRIBUTEALIGNED(sizeof(PetscScalar));
+
+// Make this a bit more readable, I almost missed the actual type lol
+typedef struct _PFDATA PFDATA;
+
+extern PetscErrorCode PFReadMatPowerData(PFDATA*, char*);
+extern PetscErrorCode GetListOfEdges_Power(PFDATA*, PetscInt*);
+extern PetscErrorCode FormJacobian_Power(SNES, Vec, Mat, Mat, void*);
+extern PetscErrorCode FormJacobian_Power_private(DM, Vec, Mat, PetscInt, PetscInt, const PetscInt*, const PetscInt*, void*);
+extern PetscErrorCode FormFunction_Power(DM, Vec, Vec, PetscInt, PetscInt, const PetscInt*, const PetscInt*, void*);
+extern PetscErrorCode SetInitialGuess_Power(DM,Vec,PetscInt,PetscInt,const PetscInt *,const PetscInt *,void*);
+
 #endif//MY_POWER_H
