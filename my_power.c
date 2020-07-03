@@ -1,12 +1,13 @@
+#include "my_power.h"
+#include <petscdmnetwork.h>
+
 static char help[] = \
 "This is a re-write of the SNES example from Petsc\n\
 An attempt was made to C++-ize it, but their use of array-like access\n\
 of structs is incompatible with C++.\n\n\
 Instead, I'll do my best to explain each line of non-obvious code.\n\
-See the source for deets.\n"
+See the source for deets.\n";
 
-#include "my_power.h"
-#include <petscdmnetwork.h>
 
 // Forward declare some stuff
 PetscErrorCode FormFunction(SNES snes, Vec X, Vec F, void *appctx);

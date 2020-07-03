@@ -49,13 +49,9 @@ RM=rm -f
 %.o: %.cpp
 	$(COMPILE.cc) $(OUTPUT_OPTION) $<
 % : %.c
-	$(LINK.cc) -o $@ $^ $(LDLIBS)
+	$(LINK.c) -o $@ $^ $(LDLIBS)
 %.o: %.c
-	$(COMPILE.cc) $(OUTPUT_OPTION) $<
-
-# For a multi-file case, suppose you have the source files a.F90, b.c, and c.cxx
-# (with a program statement appearing in a.F90 or main() appearing in the C or
-# C++ source).  This can be built by uncommenting the following two lines.
+	$(COMPILE.c) $(OUTPUT_OPTION) $<
 
 SRC := my_power.c
 SRC += 
@@ -64,12 +60,15 @@ OBJ := $(subst .c,.o,$(SRC))
 
 all : my_power
 
+print :
+	@echo $(COMPILE.c)
+
 my_power : $(OBJ)
-	$(LINK.cc) -o $@ $^ $(LDLIBS)
+	  $(LINK.c) -o $@ $^ $(LDLIBS)
 
 .PHONY: clean
 clean :
-	$(RM) $(OBJ) $(PETSC_EXAMPLE_OBJ) power_example power
+	$(RM) $(OBJ) my_power
 
 print_vars:
 	@echo CC=$(CC)
