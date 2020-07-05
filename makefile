@@ -54,7 +54,8 @@ RM=rm -f
 	$(COMPILE.c) $(OUTPUT_OPTION) $<
 
 SRC := my_power.c
-SRC += 
+SRC += my_pffunctions.c
+SRC += my_PFReadData.c
 
 OBJ := $(subst .c,.o,$(SRC))
 

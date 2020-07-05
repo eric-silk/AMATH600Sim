@@ -1,4 +1,5 @@
 #include "my_power.h"
+#include "my_pffunctions.h"
 #include <petscdmnetwork.h>
 
 static char help[] = \

@@ -161,11 +161,4 @@ struct _PFDATA
 // Make this a bit more readable, I almost missed the actual type lol
 typedef struct _PFDATA PFDATA;
 
-extern PetscErrorCode PFReadMatPowerData(PFDATA*, char*);
-extern PetscErrorCode GetListOfEdges_Power(PFDATA*, PetscInt*);
-extern PetscErrorCode FormJacobian_Power(SNES, Vec, Mat, Mat, void*);
-extern PetscErrorCode FormJacobian_Power_private(DM, Vec, Mat, PetscInt, PetscInt, const PetscInt*, const PetscInt*, void*);
-extern PetscErrorCode FormFunction_Power(DM, Vec, Vec, PetscInt, PetscInt, const PetscInt*, const PetscInt*, void*);
-extern PetscErrorCode SetInitialGuess_Power(DM,Vec,PetscInt,PetscInt,const PetscInt *,const PetscInt *,void*);
-
 #endif//MY_POWER_H
