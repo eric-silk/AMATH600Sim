@@ -135,6 +135,7 @@ struct _p_EDGE_Power
   PetscInt status; // service status (probably what the "status" bit in each means?
   PetscScalar length; // line length
   PetscInt o1; // owner number
+  PetscScalar f1; // fraction of ownership
   PetscScalar yff[2], yft[2], ytf[2], ytt[2]; // complex, of the form [G, B]
   PetscInt internal_i; // internal "from" bus number
   PetscInt internal_j; // internal "to" bus number

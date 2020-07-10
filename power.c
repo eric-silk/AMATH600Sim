@@ -1,5 +1,6 @@
-#include "my_power.h"
-#include "my_pffunctions.h"
+#include "power.h"
+#include "pffunctions.h"
+#include "PFReadData.h"
 #include <petscdmnetwork.h>
 
 static char help[] = \
@@ -34,7 +35,61 @@ int main(int argc, char **argv)
   Vec X, F;
   Mat J;
   SNES snes;
+#if 0
+  ierr = PetscInitialize(&argc,&argv,"poweroptions",help);if (ierr) return ierr;
+  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
+  {
+    /* introduce the const crank so the clang static analyzer realizes that if it enters any of the if (crank) then it must have entered the first */
+    /* this is an experiment to see how the analyzer reacts */
+    const PetscMPIInt crank = rank;
 
+    /* Create an empty network object */
+    ierr = DMNetworkCreate(PETSC_COMM_WORLD,&networkdm);CHKERRQ(ierr);
+    /* Register the components in the network */
+    ierr = DMNetworkRegisterComponent(networkdm,"branchstruct",sizeof(struct _p_EDGE_Power),&User.compkey_branch);CHKERRQ(ierr);
+    ierr = DMNetworkRegisterComponent(networkdm,"busstruct",sizeof(struct _p_VERTEX_Power),&User.compkey_bus);CHKERRQ(ierr);
+    ierr = DMNetworkRegisterComponent(networkdm,"genstruct",sizeof(struct _p_GEN),&User.compkey_gen);CHKERRQ(ierr);
+    ierr = DMNetworkRegisterComponent(networkdm,"loadstruct",sizeof(struct _p_LOAD),&User.compkey_load);CHKERRQ(ierr);
+
+    ierr = PetscLogStageRegister("Read Data",&stage1);CHKERRQ(ierr);
+    PetscLogStagePush(stage1);
+    /* READ THE DATA */
+    if (!crank) {
+      /*    READ DATA */
+      /* Only rank 0 reads the data */
+      ierr = PetscOptionsGetString(NULL,NULL,"-pfdata",pfdata_file,sizeof(pfdata_file),NULL);CHKERRQ(ierr);
+      ierr = PetscNew(&pfdata);CHKERRQ(ierr);
+      ierr = PFReadMatPowerData(pfdata,pfdata_file);CHKERRQ(ierr);
+      User.Sbase = pfdata->sbase;
+
+      numEdges = pfdata->nbranch;
+      numVertices = pfdata->nbus;
+
+      ierr = PetscMalloc1(2*numEdges,&edges);CHKERRQ(ierr);
+      ierr = GetListOfEdges_Power(pfdata,edges);CHKERRQ(ierr);
+    }
+
+    /* If external option activated. Introduce error in jacobian */
+    ierr = PetscOptionsHasName(NULL,NULL, "-jac_error", &User.jac_error);CHKERRQ(ierr);
+
+    PetscLogStagePop();
+    ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr);
+    ierr = PetscLogStageRegister("Create network",&stage2);CHKERRQ(ierr);
+    PetscLogStagePush(stage2);
+    /* Set number of nodes/edges */
+    ierr = DMNetworkSetSizes(networkdm,1,&numVertices,&numEdges,0,NULL);CHKERRQ(ierr);
+    /* Add edge connectivity */
+    ierr = DMNetworkSetEdgeList(networkdm,&edges,NULL);CHKERRQ(ierr);
+    /* Set up the network layout */
+    ierr = DMNetworkLayoutSetUp(networkdm);CHKERRQ(ierr);
+
+    if (!crank) {
+      ierr = PetscFree(edges);CHKERRQ(ierr);
+    }
+#endif
+
+
+#if 1
   // Pretty much required at the beginning. inits everything, including MPI
   // the database file, "poweroptions" here, seems to contain command line arguments commonly used
   // More investigation needed for specifics
@@ -45,8 +100,10 @@ int main(int argc, char **argv)
   {
     // scope this section for...reasons? The comments mention something about the clang static analyzer. Dunno.
     const PetscMPIInt crank = rank; //that's c(onst) rank, not crank. I think.
+
     // Set up the Network object. This grid is going to be our...admittance matrix, I believe.
     ierr = DMNetworkCreate(PETSC_COMM_WORLD, &networkdm); CHKERRQ(ierr);
+
     // Register components. This is where we define what types can be represented (as well as what their
     // representations are) in the network. Here, its the various electrical components -- branches,
     // busses, generators, and loads. In general, though, this could be things like, idk, pipes and turbines
@@ -61,7 +118,7 @@ int main(int argc, char **argv)
     ierr = DMNetworkRegisterComponent(networkdm,
                                       "busstruct",
                                       sizeof(struct _p_VERTEX_Power),
-                                      &User.compkey_branch); CHKERRQ(ierr);
+                                      &User.compkey_bus); CHKERRQ(ierr);
     // Why are neither of these "_p_VERTEX_*" or "_p_EDGE_*"?
     // Probably detailed in the header.
     ierr = DMNetworkRegisterComponent(networkdm,
@@ -71,7 +128,7 @@ int main(int argc, char **argv)
     ierr = DMNetworkRegisterComponent(networkdm,
                                       "loadstruct",
                                       sizeof(struct _p_LOAD),
-                                      &User.compkey_branch); CHKERRQ(ierr);
+                                      &User.compkey_load); CHKERRQ(ierr);
 
     // This is an interesting pattern. Why the stage and push? This ain't Git!
     ierr = PetscLogStageRegister("Read Data", &stage1); CHKERRQ(ierr);
@@ -95,6 +152,7 @@ int main(int argc, char **argv)
       numVertices = pfdata->nbus;
 
       // Yep, looks like edges are stored as packed tuples (e.g. [(,),(,)...(,)]
+      ierr = PetscPrintf(PETSC_COMM_SELF, "%d edges, %d vertices\n", numEdges, numVertices); CHKERRQ(ierr);
       ierr = PetscMalloc(2*numEdges, &edges); CHKERRQ(ierr);
       ierr = GetListOfEdges_Power(pfdata, edges); CHKERRQ(ierr);
     }
@@ -122,13 +180,13 @@ int main(int argc, char **argv)
       // We no longer need the edge list
       ierr = PetscFree(edges); CHKERRQ(ierr);
     }
-
+#endif
     if (!crank)
     {
       genj = 0;
       loadj = 0;
       ierr = DMNetworkGetEdgeRange(networkdm, &eStart, &eEnd); CHKERRQ(ierr);
-      for (i = eStart; i < eEnd; ++i)
+      for (i = eStart; i < eEnd; i++)
       {
         // network obj, vertext or edge point, component key, pointer to the data structure
         // So it looks like the User.compkey_branch, compkey_gen, etc is an enum of sorts?
@@ -139,7 +197,7 @@ int main(int argc, char **argv)
       }
 
       ierr = DMNetworkGetVertexRange(networkdm, &vStart, &vEnd); CHKERRQ(ierr);
-      for (i = vStart; i < vEnd; ++i)
+      for (i = vStart; i < vEnd; i++)
       {
         // Add each vertex
         ierr = DMNetworkAddComponent(networkdm, i, User.compkey_bus, &pfdata->bus[i-vStart]); CHKERRQ(ierr);

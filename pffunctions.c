@@ -1,4 +1,4 @@
-#include "my_pffunctions.h"
+#include "pffunctions.h"
 
 PetscErrorCode GetListOfEdges_Power(PFDATA* pfdata, PetscInt* edgelist)
 {
@@ -84,7 +84,7 @@ PetscErrorCode _Private_FormJacobian_Power(DM networkdm,
       ierr = DMNetworkGetVariableGlobalOffset(networkdm, vtx[v], &goffset); CHKERRQ(ierr);
       ierr = DMNetworkGetComponent(networkdm, vtx[v], j, &key, &component); CHKERRQ(ierr);
 
-      if (key = user_power->compkey_bus)
+      if (key == user_power->compkey_bus)
       {
         PetscInt nconnedges;
         const PetscInt *connedges;
@@ -119,10 +119,10 @@ PetscErrorCode _Private_FormJacobian_Power(DM networkdm,
             values[1] = 2.0 * Vm * bus->gl / Sbase;
             values[3] = -2.0 * Vm * bus->bl / Sbase;
           }
-          ierr = MatSetValues(J, 2, row, col, values, ADD_VALUES); CHKERRQ(ierr);
+          ierr = MatSetValues(J, 2, row, 2, col, values, ADD_VALUES); CHKERRQ(ierr);
         }
 
-        ierr = DmNetworkGetSupportingEdges(networkdm, vtx[v], &nconnedges, &connedges); CHKERRQ(ierr);
+        ierr = DMNetworkGetSupportingEdges(networkdm, vtx[v], &nconnedges, &connedges); CHKERRQ(ierr);
 
         for (i = 0; i < nconnedges; ++i)
         {
@@ -156,8 +156,8 @@ PetscErrorCode _Private_FormJacobian_Power(DM networkdm,
 
           ierr = DMNetworkGetVariableOffset(networkdm, vfrom, &offsetfrom); CHKERRQ(ierr);
           ierr = DMNetworkGetVariableOffset(networkdm, vto, &offsetto); CHKERRQ(ierr);
-          ierr = DMNetworkGetVariableGlobalOffset(networkdm, vfrom, &offsetfrom); CHKERRQ(ierr);
-          ierr = DMNetworkGetVariableGlobalOffset(networkdm, vto, &offsetto); CHKERRQ(ierr);
+          ierr = DMNetworkGetVariableGlobalOffset(networkdm, vfrom, &goffsetfrom); CHKERRQ(ierr);
+          ierr = DMNetworkGetVariableGlobalOffset(networkdm, vto, &goffsetto); CHKERRQ(ierr);
 
           if (goffsetto < 0 )
           {
@@ -172,7 +172,7 @@ PetscErrorCode _Private_FormJacobian_Power(DM networkdm,
           thetatf = thetat - thetaf;
 
           ierr = DMNetworkGetComponent(networkdm, vfrom, 0, &keyf, (void**)&busf); CHKERRQ(ierr);
-          ierr = DMNetworkGetComponent(networkdm, vto, 0, &keyt, (void**)&busf); CHKERRQ(ierr);
+          ierr = DMNetworkGetComponent(networkdm, vto, 0, &keyt, (void**)&bust); CHKERRQ(ierr);
 
           if (vfrom == vtx[v])
           {
@@ -265,7 +265,7 @@ PetscErrorCode _Private_FormJacobian_Power(DM networkdm,
     }
   }
 
-  ierr = VecRestorArrayRead(localX, &xarr); CHKERRQ(ierr);
+  ierr = VecRestoreArrayRead(localX, &xarr); CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -288,7 +288,7 @@ PetscErrorCode FormJacobian_Power(SNES snes, Vec X, Mat J, Mat Jpre, void* appct
   ierr = DMGlobalToLocalEnd(networkdm, X, INSERT_VALUES, localX); CHKERRQ(ierr);
 
   ierr = DMNetworkGetSubnetworkInfo(networkdm, 0, &nv, &ne, &vtx, &edges); CHKERRQ(ierr);
-  ierr = _Private_FormJacobian_Power(netowrkdm, localX, J, nv, ne, vtx, edges, appctx); CHKERRQ(ierr);
+  ierr = _Private_FormJacobian_Power(networkdm, localX, J, nv, ne, vtx, edges, appctx); CHKERRQ(ierr);
 
   ierr = DMRestoreLocalVector(networkdm, &localX); CHKERRQ(ierr);
 
@@ -487,7 +487,7 @@ PetscErrorCode SetInitialGuess_Power(DM networkdm,
 
     for (j = 0; j < numComps; ++j)
     {
-      ierr = DMNetworkGetComponent(networkdm, vtx[i], &offset); CHKERRQ(ierr);
+      ierr = DMNetworkGetComponent(networkdm,vtx[i],j,&key,&component);CHKERRQ(ierr);
       if (key == User->compkey_bus)
       {
         bus = (VERTEX_Power)(component);

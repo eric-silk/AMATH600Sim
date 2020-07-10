@@ -1,7 +1,7 @@
 #ifndef MY_PFFUNCTIONS_H
 #define MY_PFFUNCTIONS_H
 
-#include "my_power.h"
+#include "power.h"
 
 // by "get" they mean just print (if its enabled)
 PetscErrorCode GetListOfEdges_Power(PFDATA*, PetscInt*);
