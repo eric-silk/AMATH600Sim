@@ -67,6 +67,7 @@ PetscErrorCode _Private_FormJacobian_Power(DM networkdm,
 
   PetscFunctionBegin;
   ierr = VecGetArrayRead(localX, &xarr); CHKERRQ(ierr);
+
   for (v = 0; v < nv; ++v)
   {
     // Checks if the vertex of interest is on another node (a ghost point)
@@ -140,13 +141,10 @@ PetscErrorCode _Private_FormJacobian_Power(DM networkdm,
 
           Gff = branch->yff[0];
           Bff = branch->yff[1];
-
           Gft = branch->yft[0];
           Bft = branch->yft[1];
-
           Gtf = branch->ytf[0];
           Btf = branch->ytf[1];
-
           Gtt = branch->ytt[0];
           Btt = branch->ytt[1];
 
@@ -190,7 +188,6 @@ PetscErrorCode _Private_FormJacobian_Power(DM networkdm,
               values[2] = Vmf*Vmt*(Gft*PetscSinScalar(thetaft) + Bft*-PetscCosScalar(thetaft));
               // df/dVmt
               values[3] = Vmf*(Gft*PetscCosScalar(thetaft) + Bft*PetscSinScalar(thetaft));
-
               ierr = MatSetValues(J, 1, row, 4, col, values, ADD_VALUES); CHKERRQ(ierr);
             }
 
@@ -201,7 +198,6 @@ PetscErrorCode _Private_FormJacobian_Power(DM networkdm,
               col[1] = goffsetfrom + 1;
               col[2] = goffsetto;
               col[3] = goffsetto + 1;
-
               values[0] = Vmf * Vmt * (Bft * PetscSinScalar(thetaft) + Gft*PetscCosScalar(thetaft));
               values[1] = -2.0 * Bff * Vmf + Vmt * (-Bft*PetscCosScalar(thetaft) + Gft * PetscSinScalar(thetaft));
               values[2] = Vmf * Vmt * (-Bft * PetscSinScalar(thetaft) + Gft * - PetscCosScalar(thetaft));
@@ -210,7 +206,6 @@ PetscErrorCode _Private_FormJacobian_Power(DM networkdm,
               ierr = MatSetValues(J, 1, row, 4, col, values, ADD_VALUES); CHKERRQ(ierr);
             }
           }
-
           else // vfrom != vtx[v]
           {
             if (bust->ide != REF_BUS)
@@ -230,7 +225,6 @@ PetscErrorCode _Private_FormJacobian_Power(DM networkdm,
               // df/dVmf
               values[3] = Vmt * (Gtf*PetscCosScalar(thetatf) + Btf * PetscSinScalar(thetatf));
             }
-
             if (bust->ide != PV_BUS && bust->ide != REF_BUS)
             {
               row[0] = goffsetto + 1;
@@ -320,7 +314,7 @@ PetscErrorCode FormFunction_Power(DM networkdm, Vec localX, Vec localF, PetscInt
 
   PetscFunctionBegin;
   ierr = VecGetArrayRead(localX, &xarr); CHKERRQ(ierr);
-  ierr = VecGetArray(localF, &farr) ; CHKERRQ(ierr);
+  ierr = VecGetArray(localF, &farr); CHKERRQ(ierr);
 
   for (v=0; v<nv; v++) 
   {
@@ -473,7 +467,6 @@ PetscErrorCode SetInitialGuess_Power(DM networkdm,
   ierr = PetscObjectGetComm((PetscObject) networkdm, &comm); CHKERRQ(ierr);
   ierr = MPI_Comm_rank(comm, &rank); CHKERRQ(ierr);
   ierr = VecGetArray(localX, &xarr); CHKERRQ(ierr);
-
   for (i = 0; i < nv; ++i)
   {
     ierr = DMNetworkIsGhostVertex(networkdm, vtx[i], &ghostvtex); CHKERRQ(ierr);

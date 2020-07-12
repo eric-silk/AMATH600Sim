@@ -35,61 +35,7 @@ int main(int argc, char **argv)
   Vec X, F;
   Mat J;
   SNES snes;
-#if 0
-  ierr = PetscInitialize(&argc,&argv,"poweroptions",help);if (ierr) return ierr;
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
-  {
-    /* introduce the const crank so the clang static analyzer realizes that if it enters any of the if (crank) then it must have entered the first */
-    /* this is an experiment to see how the analyzer reacts */
-    const PetscMPIInt crank = rank;
 
-    /* Create an empty network object */
-    ierr = DMNetworkCreate(PETSC_COMM_WORLD,&networkdm);CHKERRQ(ierr);
-    /* Register the components in the network */
-    ierr = DMNetworkRegisterComponent(networkdm,"branchstruct",sizeof(struct _p_EDGE_Power),&User.compkey_branch);CHKERRQ(ierr);
-    ierr = DMNetworkRegisterComponent(networkdm,"busstruct",sizeof(struct _p_VERTEX_Power),&User.compkey_bus);CHKERRQ(ierr);
-    ierr = DMNetworkRegisterComponent(networkdm,"genstruct",sizeof(struct _p_GEN),&User.compkey_gen);CHKERRQ(ierr);
-    ierr = DMNetworkRegisterComponent(networkdm,"loadstruct",sizeof(struct _p_LOAD),&User.compkey_load);CHKERRQ(ierr);
-
-    ierr = PetscLogStageRegister("Read Data",&stage1);CHKERRQ(ierr);
-    PetscLogStagePush(stage1);
-    /* READ THE DATA */
-    if (!crank) {
-      /*    READ DATA */
-      /* Only rank 0 reads the data */
-      ierr = PetscOptionsGetString(NULL,NULL,"-pfdata",pfdata_file,sizeof(pfdata_file),NULL);CHKERRQ(ierr);
-      ierr = PetscNew(&pfdata);CHKERRQ(ierr);
-      ierr = PFReadMatPowerData(pfdata,pfdata_file);CHKERRQ(ierr);
-      User.Sbase = pfdata->sbase;
-
-      numEdges = pfdata->nbranch;
-      numVertices = pfdata->nbus;
-
-      ierr = PetscMalloc1(2*numEdges,&edges);CHKERRQ(ierr);
-      ierr = GetListOfEdges_Power(pfdata,edges);CHKERRQ(ierr);
-    }
-
-    /* If external option activated. Introduce error in jacobian */
-    ierr = PetscOptionsHasName(NULL,NULL, "-jac_error", &User.jac_error);CHKERRQ(ierr);
-
-    PetscLogStagePop();
-    ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRQ(ierr);
-    ierr = PetscLogStageRegister("Create network",&stage2);CHKERRQ(ierr);
-    PetscLogStagePush(stage2);
-    /* Set number of nodes/edges */
-    ierr = DMNetworkSetSizes(networkdm,1,&numVertices,&numEdges,0,NULL);CHKERRQ(ierr);
-    /* Add edge connectivity */
-    ierr = DMNetworkSetEdgeList(networkdm,&edges,NULL);CHKERRQ(ierr);
-    /* Set up the network layout */
-    ierr = DMNetworkLayoutSetUp(networkdm);CHKERRQ(ierr);
-
-    if (!crank) {
-      ierr = PetscFree(edges);CHKERRQ(ierr);
-    }
-#endif
-
-
-#if 1
   // Pretty much required at the beginning. inits everything, including MPI
   // the database file, "poweroptions" here, seems to contain command line arguments commonly used
   // More investigation needed for specifics
@@ -164,7 +110,6 @@ int main(int argc, char **argv)
     ierr = MPI_Barrier(PETSC_COMM_WORLD); CHKERRQ(ierr);
     ierr = PetscLogStageRegister("Create network", &stage2); CHKERRQ(ierr);
     PetscLogStagePush(stage2);
-
     // Set the number of nodes and edges
     // dm object, global number of subnetworks, number of local vertices (for each),
     //    number of local edges (again, for each), global number of coupling subnetworks,
@@ -180,7 +125,7 @@ int main(int argc, char **argv)
       // We no longer need the edge list
       ierr = PetscFree(edges); CHKERRQ(ierr);
     }
-#endif
+
     if (!crank)
     {
       genj = 0;
